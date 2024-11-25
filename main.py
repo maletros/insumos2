@@ -186,7 +186,18 @@ def tela_monitorar_estoque(root):
         cursor = conexao.cursor()
         cursor.execute("SELECT * FROM insumos")
         for linha in cursor.fetchall():
-            tabela.insert("", tk.END, values=linha)
+            quantidade = linha[2]
+            if quantidade >= 20:
+                cor = "green"
+                tag = "verde"
+            elif quantidade > 10:
+                cor = "yellow"
+                tag = "amarelo"
+            else:
+                cor = "red"
+                tag = "vermelho"
+            tabela.insert("", tk.END, values=linha, tags=(tag,))
+            tabela.tag_configure(tag, background=cor)
         conexao.close()
 
     carregar_dados()
@@ -204,7 +215,18 @@ def tela_monitorar_estoque(root):
         cursor = conexao.cursor()
         cursor.execute("SELECT * FROM insumos WHERE LOWER(nome) LIKE ?", ('%' + busca + '%',))
         for linha in cursor.fetchall():
-            tabela.insert("", tk.END, values=linha)
+            quantidade = linha[2]
+            if quantidade >= 20:
+                cor = "green"
+                tag = "verde"
+            elif quantidade > 10:
+                cor = "yellow"
+                tag = "amarelo"
+            else:
+                cor = "red"
+                tag = "vermelho"
+            tabela.insert("", tk.END, values=linha, tags=(tag,))
+            tabela.tag_configure(tag, background=cor)
         conexao.close()
 
     btn_filtrar = tk.Button(janela, text="Filtrar", command=filtrar_dados)
