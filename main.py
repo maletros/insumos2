@@ -188,13 +188,13 @@ def tela_monitorar_estoque(root):
         for linha in cursor.fetchall():
             quantidade = linha[2]
             if quantidade >= 20:
-                cor = "green"
+                cor = "#d4edda"  # Verde Claro
                 tag = "verde"
             elif quantidade > 10:
-                cor = "yellow"
+                cor = "#fff3cd"  # Amarelo Claro
                 tag = "amarelo"
             else:
-                cor = "red"
+                cor = "#f8d7da"  # Vermelho Claro
                 tag = "vermelho"
             tabela.insert("", tk.END, values=linha, tags=(tag,))
             tabela.tag_configure(tag, background=cor)
@@ -217,13 +217,13 @@ def tela_monitorar_estoque(root):
         for linha in cursor.fetchall():
             quantidade = linha[2]
             if quantidade >= 20:
-                cor = "green"
+                cor = "#d4edda"  # Verde Claro
                 tag = "verde"
             elif quantidade > 10:
-                cor = "yellow"
+                cor = "#fff3cd"  # Amarelo Claro
                 tag = "amarelo"
             else:
-                cor = "red"
+                cor = "#f8d7da"  # Vermelho Claro
                 tag = "vermelho"
             tabela.insert("", tk.END, values=linha, tags=(tag,))
             tabela.tag_configure(tag, background=cor)
