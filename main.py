@@ -426,6 +426,10 @@ def iniciar_aplicativo(planilha_path):
         btn = tk.Button(root, text=texto, font=("Arial", 14), width=30, command=comando)
         btn.pack(pady=5)
 
+    # Botão para sair do aplicativo
+    btn_sair = tk.Button(root, text="Sair", font=("Arial", 14), width=30, command=root.quit)
+    btn_sair.pack(pady=5)
+
     root.mainloop()
 
 
