@@ -342,7 +342,7 @@ def tela_historico(root):
     frame_tabela = tk.Frame(janela)
     frame_tabela.pack(fill=tk.BOTH, expand=True)
 
-    colunas = ("ID", "Código do Insumo", "Tipo", "Quantidade", "Data")
+    colunas = ("ID", "Código do Insumo", "Nome do Insumo", "Tipo", "Quantidade", "Data")
     tabela = ttk.Treeview(frame_tabela, columns=colunas, show="headings")
     for col in colunas:
         tabela.heading(col, text=col)
@@ -353,7 +353,12 @@ def tela_historico(root):
         tabela.delete(*tabela.get_children())
         conexao = sqlite3.connect("estoque_dental.db")
         cursor = conexao.cursor()
-        cursor.execute("SELECT * FROM historico ORDER BY data DESC")
+        cursor.execute('''
+            SELECT historico.id, historico.insumo_codigo, insumos.nome, historico.tipo, historico.quantidade, historico.data 
+            FROM historico 
+            JOIN insumos ON historico.insumo_codigo = insumos.codigo 
+            ORDER BY historico.data DESC
+        ''')
         for linha in cursor.fetchall():
             tabela.insert("", tk.END, values=linha)
         conexao.close()
