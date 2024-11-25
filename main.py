@@ -2,76 +2,108 @@ import sqlite3
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
+import pandas as pd
 import csv
+from datetime import datetime, timedelta
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-import datetime
 
+# Função para carregar dados da planilha para o banco de dados
+def carregar_planilha_para_banco(planilha_path):
+    df = pd.read_excel(planilha_path, sheet_name="Página1")
 
-# Inicializar banco de dados
-def inicializar_banco():
     conexao = sqlite3.connect("estoque_dental.db")
     cursor = conexao.cursor()
 
-    # Criar tabela de insumos
+    # Tabela de insumos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS insumos (
-            codigo INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo TEXT PRIMARY KEY,
             nome TEXT NOT NULL,
             quantidade INTEGER NOT NULL,
-            categoria TEXT NOT NULL,
-            unidade TEXT NOT NULL,
-            fornecedor TEXT,
-            quantidade_minima INTEGER NOT NULL
+            validade TEXT,
+            localizacao TEXT,
+            observacao TEXT
         )
     ''')
     
-    # Criar tabela de histórico
+    # Tabela de histórico de movimentações
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS historico (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            insumo_codigo INTEGER,
+            insumo_codigo TEXT NOT NULL,
             tipo TEXT NOT NULL,
             quantidade INTEGER NOT NULL,
             data TEXT NOT NULL,
-            FOREIGN KEY (insumo_codigo) REFERENCES insumos(codigo)
+            FOREIGN KEY (insumo_codigo) REFERENCES insumos (codigo)
         )
     ''')
+
+    # Inserir os dados da planilha na tabela de insumos
+    for _, linha in df.iterrows():
+        try:
+            cursor.execute('''
+                INSERT OR REPLACE INTO insumos (codigo, nome, quantidade, validade, localizacao, observacao)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                linha["CÓDIGO"],
+                linha["ÍTEM"],
+                int(linha["QUANTIDADE"]) if str(linha["QUANTIDADE"]).isdigit() else 0,
+                str(linha["VALIDADE"]) if pd.notna(linha["VALIDADE"]) else "INDETERMINADO",
+                linha["ESTANTE/PRATELEIRA"],
+                linha["OBSERVAÇÃO"] if pd.notna(linha["OBSERVAÇÃO"]) else None
+            ))
+        except Exception as e:
+            print(f"Erro ao inserir linha {linha}: {e}")
     
     conexao.commit()
     conexao.close()
 
 
-# Função para validar data no formato DD/MM/AAAA
-def validar_data(data):
+# Função para exportar os dados do banco para a planilha Excel
+def exportar_para_excel():
+    conexao = sqlite3.connect("estoque_dental.db")
+    cursor = conexao.cursor()
+    
+    # Buscar dados da tabela de insumos
+    cursor.execute("SELECT * FROM insumos")
+    dados = cursor.fetchall()
+    
+    # Criar um DataFrame com os dados
+    df = pd.DataFrame(dados, columns=["CÓDIGO", "ÍTEM", "QUANTIDADE", "VALIDADE", "ESTANTE/PRATELEIRA", "OBSERVAÇÃO"])
+    
+    # Exportar para a planilha
+    nome_arquivo = "ESTOQUE_ATUALIZADO.xlsx"
+    df.to_excel(nome_arquivo, index=False, sheet_name="Página1")
+    messagebox.showinfo("Sucesso", f"Planilha exportada: {nome_arquivo}")
+    conexao.close()
+
+
+# Função para converter as datas de validade corretamente (ignorando o tempo)
+def converter_data(data):
     try:
-        datetime.datetime.strptime(data, "%d/%m/%Y")
-        return True
+        return datetime.strptime(data, "%Y-%m-%d %H:%M:%S").date()  # Ignora o tempo
     except ValueError:
-        return False
+        try:
+            return datetime.strptime(data, "%Y-%m-%d").date()  # Apenas a data
+        except ValueError:
+            return None
 
 
-# Criar menu dinâmico
-def criar_menu(root, botoes):
-    for texto, comando in botoes:
-        btn = tk.Button(root, text=texto, font=("Arial", 14), width=30, command=comando)
-        btn.pack(pady=5)
-
-
-# Tela para registrar insumos
+# Função para registrar novos insumos manualmente
 def tela_registrar_insumos(root):
-    root.withdraw()  # Ocultar janela principal
+    root.withdraw()
     janela = tk.Toplevel()
-    janela.title("Registrar Novos Insumos")
+    janela.title("Registrar Novo Insumo")
     janela.geometry("400x400")
 
     campos = [
+        ("Código do Insumo", "codigo"),
         ("Nome do Insumo", "nome"),
         ("Quantidade Inicial", "quantidade"),
-        ("Categoria", "categoria"),
-        ("Unidade de Medida", "unidade"),
-        ("Fornecedor", "fornecedor"),
-        ("Quantidade Mínima", "quantidade_minima")
+        ("Validade (DD/MM/AAAA)", "validade"),
+        ("Localização", "localizacao"),
+        ("Observação", "observacao")
     ]
 
     entradas = {}
@@ -82,24 +114,38 @@ def tela_registrar_insumos(root):
         entrada.pack()
         entradas[chave] = entrada
 
-    # Função para salvar insumo no banco
     def salvar_insumo():
         dados = {chave: entradas[chave].get().strip() for chave in entradas}
 
-        if not dados["nome"] or not dados["quantidade"].isdigit() or not dados["quantidade_minima"].isdigit():
+        if not dados["codigo"] or not dados["nome"] or not dados["quantidade"].isdigit():
             messagebox.showerror("Erro", "Preencha todos os campos obrigatórios corretamente!")
             return
+
+        # Validar a data de validade
+        if dados["validade"]:
+            try:
+                datetime.strptime(dados["validade"], "%d/%m/%Y")
+            except ValueError:
+                messagebox.showerror("Erro", "Formato de data inválido! Use DD/MM/AAAA.")
+                return
 
         conexao = sqlite3.connect("estoque_dental.db")
         cursor = conexao.cursor()
         try:
             cursor.execute('''
-                INSERT INTO insumos (nome, quantidade, categoria, unidade, fornecedor, quantidade_minima)
+                INSERT INTO insumos (codigo, nome, quantidade, validade, localizacao, observacao)
                 VALUES (?, ?, ?, ?, ?, ?)
-            ''', (dados["nome"], int(dados["quantidade"]), dados["categoria"],
-                  dados["unidade"], dados["fornecedor"], int(dados["quantidade_minima"])))
+            ''', (
+                dados["codigo"],
+                dados["nome"],
+                int(dados["quantidade"]),
+                dados["validade"] if dados["validade"] else "INDETERMINADO",
+                dados["localizacao"],
+                dados["observacao"]
+            ))
             conexao.commit()
             messagebox.showinfo("Sucesso", "Insumo cadastrado com sucesso!")
+            exportar_para_excel()  # Atualizar a planilha Excel
         except sqlite3.Error as e:
             messagebox.showerror("Erro de Banco de Dados", str(e))
         finally:
@@ -110,12 +156,11 @@ def tela_registrar_insumos(root):
 
     btn_salvar = tk.Button(janela, text="Salvar", command=salvar_insumo)
     btn_salvar.pack(pady=10)
-
     btn_cancelar = tk.Button(janela, text="Cancelar", command=lambda: [janela.destroy(), root.deiconify()])
     btn_cancelar.pack(pady=5)
 
 
-# Tela para monitorar estoque
+# Função para monitorar estoque
 def tela_monitorar_estoque(root):
     root.withdraw()
     janela = tk.Toplevel()
@@ -128,29 +173,21 @@ def tela_monitorar_estoque(root):
     frame_tabela = tk.Frame(janela)
     frame_tabela.pack(fill=tk.BOTH, expand=True)
 
-    colunas = ("Código", "Nome", "Quantidade", "Categoria", "Unidade", "Fornecedor", "Mínimo")
+    colunas = ("Código", "Nome", "Quantidade", "Validade", "Localização", "Observação")
     tabela = ttk.Treeview(frame_tabela, columns=colunas, show="headings")
     for col in colunas:
         tabela.heading(col, text=col)
-        tabela.column(col, width=100)
+        tabela.column(col, width=120)
     tabela.pack(fill=tk.BOTH, expand=True, pady=10)
 
     def carregar_dados():
         tabela.delete(*tabela.get_children())
         conexao = sqlite3.connect("estoque_dental.db")
         cursor = conexao.cursor()
-        try:
-            cursor.execute("SELECT * FROM insumos")
-            for linha in cursor.fetchall():
-                codigo, nome, quantidade, categoria, unidade, fornecedor, minimo = linha
-                cor = "red" if quantidade <= minimo else "black"
-                tabela.insert("", tk.END, values=(codigo, nome, quantidade, categoria, unidade, fornecedor, minimo),
-                              tags=(cor,))
-            tabela.tag_configure("red", foreground="red")
-        except sqlite3.Error as e:
-            messagebox.showerror("Erro de Banco de Dados", str(e))
-        finally:
-            conexao.close()
+        cursor.execute("SELECT * FROM insumos")
+        for linha in cursor.fetchall():
+            tabela.insert("", tk.END, values=linha)
+        conexao.close()
 
     carregar_dados()
 
@@ -165,18 +202,10 @@ def tela_monitorar_estoque(root):
         tabela.delete(*tabela.get_children())
         conexao = sqlite3.connect("estoque_dental.db")
         cursor = conexao.cursor()
-        try:
-            cursor.execute("SELECT * FROM insumos WHERE LOWER(nome) LIKE ?", ('%' + busca + '%',))
-            for linha in cursor.fetchall():
-                codigo, nome, quantidade, categoria, unidade, fornecedor, minimo = linha
-                cor = "red" if quantidade <= minimo else "black"
-                tabela.insert("", tk.END, values=(codigo, nome, quantidade, categoria, unidade, fornecedor, minimo),
-                              tags=(cor,))
-            tabela.tag_configure("red", foreground="red")
-        except sqlite3.Error as e:
-            messagebox.showerror("Erro de Banco de Dados", str(e))
-        finally:
-            conexao.close()
+        cursor.execute("SELECT * FROM insumos WHERE LOWER(nome) LIKE ?", ('%' + busca + '%',))
+        for linha in cursor.fetchall():
+            tabela.insert("", tk.END, values=linha)
+        conexao.close()
 
     btn_filtrar = tk.Button(janela, text="Filtrar", command=filtrar_dados)
     btn_filtrar.pack(pady=5)
@@ -184,7 +213,8 @@ def tela_monitorar_estoque(root):
     btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
     btn_voltar.pack(pady=10)
 
-# Tela para movimentação de estoque
+
+# Função para movimentação de estoque
 def tela_movimentacao_estoque(root):
     root.withdraw()
     janela = tk.Toplevel()
@@ -194,7 +224,6 @@ def tela_movimentacao_estoque(root):
     titulo = tk.Label(janela, text="Registrar Movimentação de Estoque", font=("Arial", 18, "bold"))
     titulo.pack(pady=10)
 
-    # Seleção de insumos
     frame_selecao = tk.Frame(janela)
     frame_selecao.pack(pady=10)
     label_insumo = tk.Label(frame_selecao, text="Selecionar Insumo:")
@@ -205,92 +234,72 @@ def tela_movimentacao_estoque(root):
     def carregar_insumos():
         conexao = sqlite3.connect("estoque_dental.db")
         cursor = conexao.cursor()
-        try:
-            cursor.execute("SELECT codigo, nome FROM insumos")
-            insumos = cursor.fetchall()
-            combo_insumos['values'] = [f"{codigo} - {nome}" for codigo, nome in insumos]
-        except sqlite3.Error as e:
-            messagebox.showerror("Erro de Banco de Dados", str(e))
-        finally:
-            conexao.close()
+        cursor.execute("SELECT codigo, nome FROM insumos")
+        insumos = cursor.fetchall()
+        conexao.close()
+        combo_insumos['values'] = [f"{codigo} - {nome}" for codigo, nome in insumos]
 
     carregar_insumos()
 
-    # Campos para entrada de dados
     frame_quantidade = tk.Frame(janela)
     frame_quantidade.pack(pady=10)
-
     label_quantidade = tk.Label(frame_quantidade, text="Quantidade:")
     label_quantidade.pack(side=tk.LEFT, padx=5)
     entrada_quantidade = tk.Entry(frame_quantidade, width=10)
     entrada_quantidade.pack(side=tk.LEFT, padx=5)
 
-    label_data = tk.Label(frame_quantidade, text="Data (DD/MM/AAAA):")
-    label_data.pack(side=tk.LEFT, padx=5)
-    entrada_data = tk.Entry(frame_quantidade, width=15)
-    entrada_data.pack(side=tk.LEFT, padx=5)
-
-    # Registrar entrada de insumo
+    # Registrar entrada
     def registrar_entrada():
-        if not combo_insumos.get() or not entrada_quantidade.get().isdigit() or not validar_data(entrada_data.get()):
+        if not combo_insumos.get() or not entrada_quantidade.get().isdigit():
             messagebox.showerror("Erro", "Preencha todos os campos corretamente!")
             return
 
-        codigo = int(combo_insumos.get().split(" - ")[0])
         quantidade = int(entrada_quantidade.get())
-        data = entrada_data.get()
+        codigo = combo_insumos.get().split(" - ")[0]
 
         conexao = sqlite3.connect("estoque_dental.db")
         cursor = conexao.cursor()
-        try:
-            cursor.execute("UPDATE insumos SET quantidade = quantidade + ? WHERE codigo = ?", (quantidade, codigo))
-            cursor.execute('''
-                INSERT INTO historico (insumo_codigo, tipo, quantidade, data)
-                VALUES (?, "Entrada", ?, ?)
-            ''', (codigo, quantidade, data))
-            conexao.commit()
-            messagebox.showinfo("Sucesso", "Entrada registrada com sucesso!")
-            carregar_insumos()
-        except sqlite3.Error as e:
-            messagebox.showerror("Erro de Banco de Dados", str(e))
-        finally:
-            conexao.close()
+        cursor.execute("UPDATE insumos SET quantidade = quantidade + ? WHERE codigo = ?", (quantidade, codigo))
+        cursor.execute('''
+            INSERT INTO historico (insumo_codigo, tipo, quantidade, data)
+            VALUES (?, ?, ?, ?)
+        ''', (codigo, "Entrada", quantidade, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        conexao.commit()
+        conexao.close()
+        messagebox.showinfo("Sucesso", "Entrada registrada com sucesso!")
+        carregar_insumos()
 
-    # Registrar saída de insumo
+    # Registrar saída
     def registrar_saida():
-        if not combo_insumos.get() or not entrada_quantidade.get().isdigit() or not validar_data(entrada_data.get()):
+        if not combo_insumos.get() or not entrada_quantidade.get().isdigit():
             messagebox.showerror("Erro", "Preencha todos os campos corretamente!")
             return
 
-        codigo = int(combo_insumos.get().split(" - ")[0])
         quantidade = int(entrada_quantidade.get())
-        data = entrada_data.get()
+        codigo = combo_insumos.get().split(" - ")[0]
 
         conexao = sqlite3.connect("estoque_dental.db")
         cursor = conexao.cursor()
-        try:
-            cursor.execute("SELECT quantidade FROM insumos WHERE codigo = ?", (codigo,))
-            quantidade_atual = cursor.fetchone()[0]
-            if quantidade > quantidade_atual:
-                messagebox.showerror("Erro", "Quantidade em estoque insuficiente!")
-                return
+        cursor.execute("SELECT quantidade FROM insumos WHERE codigo = ?", (codigo,))
+        quantidade_atual = cursor.fetchone()[0]
 
-            cursor.execute("UPDATE insumos SET quantidade = quantidade - ? WHERE codigo = ?", (quantidade, codigo))
-            cursor.execute('''
-                INSERT INTO historico (insumo_codigo, tipo, quantidade, data)
-                VALUES (?, "Saída", ?, ?)
-            ''', (codigo, quantidade, data))
-            conexao.commit()
-            messagebox.showinfo("Sucesso", "Saída registrada com sucesso!")
-            carregar_insumos()
-        except sqlite3.Error as e:
-            messagebox.showerror("Erro de Banco de Dados", str(e))
-        finally:
+        if quantidade > quantidade_atual:
+            messagebox.showerror("Erro", "Quantidade em estoque insuficiente!")
             conexao.close()
+            return
+
+        cursor.execute("UPDATE insumos SET quantidade = quantidade - ? WHERE codigo = ?", (quantidade, codigo))
+        cursor.execute('''
+            INSERT INTO historico (insumo_codigo, tipo, quantidade, data)
+            VALUES (?, ?, ?, ?)
+        ''', (codigo, "Saída", quantidade, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        conexao.commit()
+        conexao.close()
+        messagebox.showinfo("Sucesso", "Saída registrada com sucesso!")
+        carregar_insumos()
 
     btn_entrada = tk.Button(janela, text="Registrar Entrada", command=registrar_entrada)
     btn_entrada.pack(pady=5)
-
     btn_saida = tk.Button(janela, text="Registrar Saída", command=registrar_saida)
     btn_saida.pack(pady=5)
 
@@ -298,86 +307,84 @@ def tela_movimentacao_estoque(root):
     btn_voltar.pack(pady=10)
 
 
-# Tela para relatórios
-def tela_relatorios(root):
+# Função para histórico de movimentações
+def tela_historico(root):
     root.withdraw()
     janela = tk.Toplevel()
-    janela.title("Relatórios")
-    janela.geometry("600x500")
+    janela.title("Histórico de Movimentações")
+    janela.geometry("800x600")
 
-    titulo = tk.Label(janela, text="Relatórios", font=("Arial", 18, "bold"))
+    titulo = tk.Label(janela, text="Histórico de Movimentações", font=("Arial", 18, "bold"))
     titulo.pack(pady=10)
 
-    # Gerar relatório em CSV
-    def gerar_csv():
+    frame_tabela = tk.Frame(janela)
+    frame_tabela.pack(fill=tk.BOTH, expand=True)
+
+    colunas = ("ID", "Código do Insumo", "Tipo", "Quantidade", "Data")
+    tabela = ttk.Treeview(frame_tabela, columns=colunas, show="headings")
+    for col in colunas:
+        tabela.heading(col, text=col)
+        tabela.column(col, width=120)
+    tabela.pack(fill=tk.BOTH, expand=True, pady=10)
+
+    def carregar_historico():
+        tabela.delete(*tabela.get_children())
         conexao = sqlite3.connect("estoque_dental.db")
         cursor = conexao.cursor()
-        try:
-            cursor.execute('''
-                SELECT insumos.nome, historico.tipo, historico.quantidade, historico.data
-                FROM historico
-                INNER JOIN insumos ON historico.insumo_codigo = insumos.codigo
-            ''')
-            dados = cursor.fetchall()
-            nome_arquivo = "relatorio_estoque.csv"
-            with open(nome_arquivo, mode="w", newline="", encoding="utf-8") as arquivo_csv:
-                escritor = csv.writer(arquivo_csv)
-                escritor.writerow(["Nome do Insumo", "Tipo", "Quantidade", "Data"])
-                escritor.writerows(dados)
-            messagebox.showinfo("Sucesso", f"Relatório CSV gerado: {nome_arquivo}")
-        except sqlite3.Error as e:
-            messagebox.showerror("Erro de Banco de Dados", str(e))
-        finally:
-            conexao.close()
+        cursor.execute("SELECT * FROM historico ORDER BY data DESC")
+        for linha in cursor.fetchall():
+            tabela.insert("", tk.END, values=linha)
+        conexao.close()
 
-    # Gerar relatório em PDF
-    def gerar_pdf():
-        conexao = sqlite3.connect("estoque_dental.db")
-        cursor = conexao.cursor()
-        try:
-            cursor.execute('''
-                SELECT insumos.nome, historico.tipo, historico.quantidade, historico.data
-                FROM historico
-                INNER JOIN insumos ON historico.insumo_codigo = insumos.codigo
-            ''')
-            dados = cursor.fetchall()
-            nome_arquivo = "relatorio_estoque.pdf"
-            pdf = canvas.Canvas(nome_arquivo, pagesize=letter)
-            pdf.setFont("Helvetica-Bold", 16)
-            pdf.drawString(200, 750, "Relatório de Estoque")
-            pdf.setFont("Helvetica", 12)
-
-            y = 700
-            for nome, tipo, quantidade, data in dados:
-                if y < 50:
-                    pdf.showPage()
-                    pdf.setFont("Helvetica", 12)
-                    y = 750
-                pdf.drawString(50, y, nome)
-                pdf.drawString(200, y, tipo)
-                pdf.drawString(300, y, str(quantidade))
-                pdf.drawString(400, y, data)
-                y -= 20
-
-            pdf.save()
-            messagebox.showinfo("Sucesso", f"Relatório PDF gerado: {nome_arquivo}")
-        except sqlite3.Error as e:
-            messagebox.showerror("Erro de Banco de Dados", str(e))
-        finally:
-            conexao.close()
-
-    btn_csv = tk.Button(janela, text="Gerar CSV", command=gerar_csv)
-    btn_csv.pack(pady=10)
-
-    btn_pdf = tk.Button(janela, text="Gerar PDF", command=gerar_pdf)
-    btn_pdf.pack(pady=10)
+    carregar_historico()
 
     btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
-    btn_voltar.pack(pady=20)
+    btn_voltar.pack(pady=10)
 
 
-def iniciar_aplicativo():
-    inicializar_banco()
+# Função para verificar validade
+def tela_alertas_validade(root):
+    root.withdraw()
+    janela = tk.Toplevel()
+    janela.title("Alertas de Validade")
+    janela.geometry("800x600")
+
+    titulo = tk.Label(janela, text="Itens Vencidos ou Próximos da Validade", font=("Arial", 18, "bold"))
+    titulo.pack(pady=10)
+
+    frame_tabela = tk.Frame(janela)
+    frame_tabela.pack(fill=tk.BOTH, expand=True)
+
+    colunas = ("Código", "Nome", "Quantidade", "Validade", "Localização")
+    tabela = ttk.Treeview(frame_tabela, columns=colunas, show="headings")
+    for col in colunas:
+        tabela.heading(col, text=col)
+        tabela.column(col, width=120)
+    tabela.pack(fill=tk.BOTH, expand=True, pady=10)
+
+    def carregar_alertas():
+        tabela.delete(*tabela.get_children())
+        hoje = datetime.now().date()  # Converte a data de hoje para o formato date (sem tempo)
+        alerta_prazo = hoje + timedelta(days=30)  # Itens próximos a vencer em 30 dias
+        conexao = sqlite3.connect("estoque_dental.db")
+        cursor = conexao.cursor()
+        cursor.execute("SELECT * FROM insumos WHERE validade != 'INDETERMINADO'")
+        for linha in cursor.fetchall():
+            validade = converter_data(linha[3])  # Convertendo a data de validade
+            if validade and (validade < hoje or validade <= alerta_prazo):
+                tabela.insert("", tk.END, values=linha[:5])
+        conexao.close()
+
+    carregar_alertas()
+
+    btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
+    btn_voltar.pack(pady=10)
+
+
+# Menu principal
+def iniciar_aplicativo(planilha_path):
+    carregar_planilha_para_banco(planilha_path)
+
     root = tk.Tk()
     root.title("Controle de Estoque - Clínica Odontológica")
     root.geometry("600x400")
@@ -386,15 +393,20 @@ def iniciar_aplicativo():
     titulo.pack(pady=20)
 
     botoes = [
-        ("Registrar Novos Insumos", lambda: tela_registrar_insumos(root)),
+        ("Registrar Novo Insumo", lambda: tela_registrar_insumos(root)),
         ("Monitorar Estoque", lambda: tela_monitorar_estoque(root)),
         ("Movimentar Estoque", lambda: tela_movimentacao_estoque(root)),
-        ("Gerar Relatórios", lambda: tela_relatorios(root))
+        ("Histórico de Movimentações", lambda: tela_historico(root)),
+        ("Alertas de Validade", lambda: tela_alertas_validade(root))
     ]
-    criar_menu(root, botoes)
+
+    for texto, comando in botoes:
+        btn = tk.Button(root, text=texto, font=("Arial", 14), width=30, command=comando)
+        btn.pack(pady=5)
 
     root.mainloop()
 
 
-# Iniciar o programa
-iniciar_aplicativo()
+# Caminho relativo da planilha
+planilha_path = "ESTOQUE.xlsx"
+iniciar_aplicativo(planilha_path)
