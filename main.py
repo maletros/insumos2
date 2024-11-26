@@ -419,6 +419,65 @@ def tela_alertas_validade(root):
     btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
     btn_voltar.pack(pady=10)
 
+
+def gerar_relatorio_pdf():
+    conexao = sqlite3.connect("estoque_dental.db")
+    cursor = conexao.cursor()
+    
+    cursor.execute('''
+        SELECT historico.id, historico.insumo_codigo, insumos.nome, historico.tipo, historico.quantidade, historico.data 
+        FROM historico 
+        JOIN insumos ON historico.insumo_codigo = insumos.codigo 
+        ORDER BY historico.data DESC
+    ''')
+    
+    movimentacoes = cursor.fetchall()
+    conexao.close()
+
+    nome_arquivo = "relatorio_movimentacoes.pdf"
+    c = canvas.Canvas(nome_arquivo, pagesize=letter)
+    largura, altura = letter
+
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(30, altura - 30, "Relatório de Movimentações de Estoque")
+
+    c.setFont("Helvetica", 12)
+    linha = altura - 60
+    for movimentacao in movimentacoes:
+        texto = f"ID: {movimentacao[0]} | Código: {movimentacao[1]} | Nome: {movimentacao[2]} | Tipo: {movimentacao[3]} | Quantidade: {movimentacao[4]} | Data: {movimentacao[5]}"
+        c.drawString(30, linha, texto)
+        linha -= 20
+        if linha < 40:
+            c.showPage()
+            c.setFont("Helvetica", 12)
+            linha = altura - 40
+
+    c.save()
+    messagebox.showinfo("Sucesso", f"Relatório gerado: {nome_arquivo}")
+
+
+def tela_gerar_relatorio(root):
+    root.withdraw()
+    janela = tk.Toplevel()
+    janela.title("Gerar Relatório")
+    janela.geometry("400x200")
+
+    label = ttk.Label(janela, text="Deseja gerar o relatório de todas as movimentações em PDF?")
+    label.pack(pady=20)
+
+    def confirmar_gerar_relatorio():
+        gerar_relatorio_pdf()
+        janela.destroy()
+        root.deiconify()
+
+    btn_sim = ttk.Button(janela, text="Sim", command=confirmar_gerar_relatorio)
+    btn_sim.pack(pady=5)
+
+    btn_nao = ttk.Button(janela, text="Não", command=lambda: [janela.destroy(), root.deiconify()])
+    btn_nao.pack(pady=5)
+
+
+
 # Aplicar estilo ao aplicativo
 def aplicar_estilos():
     estilo = ttk.Style()
@@ -434,7 +493,7 @@ def aplicar_estilos():
     estilo.configure('TButton', background='#4CAF50', foreground='white', borderwidth=1)
     estilo.map('TButton', background=[('active', '#45a049')])
 
-# Atualização no início do aplicativo
+# Menu principal
 def iniciar_aplicativo(planilha_path):
     carregar_planilha_para_banco(planilha_path)
 
@@ -451,7 +510,8 @@ def iniciar_aplicativo(planilha_path):
         ("Monitorar Estoque", lambda: tela_monitorar_estoque(root)),
         ("Movimentar Estoque", lambda: tela_movimentacao_estoque(root)),
         ("Histórico de Movimentações", lambda: tela_historico(root)),
-        ("Alertas de Validade", lambda: tela_alertas_validade(root))
+        ("Alertas de Validade", lambda: tela_alertas_validade(root)),
+        ("Gerar Relatório", lambda: tela_gerar_relatorio(root))
     ]
 
     for texto, comando in botoes:
