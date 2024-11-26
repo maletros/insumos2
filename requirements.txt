@@ -1,3 +1,4 @@
 pandas
-reportlab
 openpyxl
+xlrd
+reportlab

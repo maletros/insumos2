@@ -407,16 +407,31 @@ def tela_alertas_validade(root):
     btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
     btn_voltar.pack(pady=10)
 
+# Aplicar estilo ao aplicativo
+def aplicar_estilos():
+    estilo = ttk.Style()
+    estilo.theme_use('clam')
 
-# Menu principal
+    # Configuração de fontes
+    estilo.configure('TLabel', font=('Arial', 12))
+    estilo.configure('TButton', font=('Arial', 12), padding=6)
+    estilo.configure('Treeview', font=('Arial', 10), rowheight=25)
+    estilo.configure('TEntry', font=('Arial', 12))
+
+    # Estilo dos botões
+    estilo.configure('TButton', background='#4CAF50', foreground='white', borderwidth=1)
+    estilo.map('TButton', background=[('active', '#45a049')])
+
+# Atualização no início do aplicativo
 def iniciar_aplicativo(planilha_path):
     carregar_planilha_para_banco(planilha_path)
 
     root = tk.Tk()
+    aplicar_estilos()  # Aplicar os estilos
     root.title("Controle de Estoque - Clínica Odontológica")
     root.geometry("600x400")
 
-    titulo = tk.Label(root, text="Menu Principal", font=("Arial", 18, "bold"))
+    titulo = ttk.Label(root, text="Menu Principal", font=("Arial", 18, "bold"))
     titulo.pack(pady=20)
 
     botoes = [
@@ -428,11 +443,10 @@ def iniciar_aplicativo(planilha_path):
     ]
 
     for texto, comando in botoes:
-        btn = tk.Button(root, text=texto, font=("Arial", 14), width=30, command=comando)
+        btn = ttk.Button(root, text=texto, width=30, command=comando)
         btn.pack(pady=5)
 
-    # Botão para sair do aplicativo
-    btn_sair = tk.Button(root, text="Sair", font=("Arial", 14), width=30, command=root.quit)
+    btn_sair = ttk.Button(root, text="Sair", width=30, command=root.quit)
     btn_sair.pack(pady=5)
 
     root.mainloop()
