@@ -107,7 +107,7 @@ def tela_registrar_insumos(root):
     root.withdraw()
     janela = tk.Toplevel()
     janela.title("Registrar Novo Insumo")
-    janela.geometry("400x400")
+    janela.geometry("800x600")
 
     campos = [
         ("Código do Insumo", "codigo"),
@@ -253,7 +253,7 @@ def tela_movimentacao_estoque(root):
     root.withdraw()
     janela = tk.Toplevel()
     janela.title("Movimentação de Estoque")
-    janela.geometry("600x600")
+    janela.geometry("800x600")
 
     titulo = tk.Label(janela, text="Registrar Movimentação de Estoque", font=("Arial", 18, "bold"))
     titulo.pack(pady=10)
@@ -460,7 +460,7 @@ def tela_gerar_relatorio(root):
     root.withdraw()
     janela = tk.Toplevel()
     janela.title("Gerar Relatório")
-    janela.geometry("400x200")
+    janela.geometry("800x600")
 
     label = ttk.Label(janela, text="Deseja gerar o relatório de todas as movimentações em PDF?")
     label.pack(pady=20)
@@ -500,7 +500,7 @@ def iniciar_aplicativo(planilha_path):
     root = tk.Tk()
     aplicar_estilos()  # Aplicar os estilos
     root.title("Controle de Estoque - Clínica Odontológica")
-    root.geometry("600x400")
+    root.geometry("800x600")
 
     titulo = ttk.Label(root, text="Menu Principal", font=("Arial", 18, "bold"))
     titulo.pack(pady=20)
