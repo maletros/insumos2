@@ -102,12 +102,28 @@ def converter_data(data):
             return None
 
 
+# Função para centralizar a janela
+def centralizar_janela(root):
+    root.update_idletasks()
+    largura_janela = root.winfo_width()
+    altura_janela = root.winfo_height()
+    largura_tela = root.winfo_screenwidth()
+    altura_tela = root.winfo_screenheight()
+
+    x = (largura_tela // 2) - (largura_janela // 2)
+    y = (altura_tela // 2) - (altura_janela // 2)
+    root.geometry(f'{largura_janela}x{altura_janela}+{x}+{y}')
+
+
+
 # Função para registrar novos insumos manualmente
 def tela_registrar_insumos(root):
     root.withdraw()
     janela = tk.Toplevel()
     janela.title("Registrar Novo Insumo")
     janela.geometry("800x600")
+
+    centralizar_janela(janela)
 
     campos = [
         ("Código do Insumo", "codigo"),
@@ -178,6 +194,8 @@ def tela_monitorar_estoque(root):
     janela = tk.Toplevel()
     janela.title("Monitorar Estoque")
     janela.geometry("800x600")
+
+    centralizar_janela(janela)
 
     titulo = tk.Label(janela, text="Estoque Atual", font=("Arial", 18, "bold"))
     titulo.pack(pady=10)
@@ -254,6 +272,8 @@ def tela_movimentacao_estoque(root):
     janela = tk.Toplevel()
     janela.title("Movimentação de Estoque")
     janela.geometry("800x600")
+
+    centralizar_janela(janela)
 
     titulo = tk.Label(janela, text="Registrar Movimentação de Estoque", font=("Arial", 18, "bold"))
     titulo.pack(pady=10)
@@ -348,6 +368,8 @@ def tela_historico(root):
     janela.title("Histórico de Movimentações")
     janela.geometry("800x600")
 
+    centralizar_janela(janela)
+
     titulo = tk.Label(janela, text="Histórico de Movimentações", font=("Arial", 18, "bold"))
     titulo.pack(pady=10)
 
@@ -387,6 +409,8 @@ def tela_alertas_validade(root):
     janela = tk.Toplevel()
     janela.title("Alertas de Validade")
     janela.geometry("800x600")
+
+    centralizar_janela(janela)
 
     titulo = tk.Label(janela, text="Itens Vencidos ou Próximos da Validade", font=("Arial", 18, "bold"))
     titulo.pack(pady=10)
@@ -462,6 +486,8 @@ def tela_gerar_relatorio(root):
     janela.title("Gerar Relatório")
     janela.geometry("800x600")
 
+    centralizar_janela(janela)
+
     label = ttk.Label(janela, text="Deseja gerar o relatório de todas as movimentações em PDF?")
     label.pack(pady=20)
 
@@ -501,6 +527,8 @@ def iniciar_aplicativo(planilha_path):
     aplicar_estilos()  # Aplicar os estilos
     root.title("Controle de Estoque - Clínica Odontológica")
     root.geometry("800x600")
+
+    centralizar_janela(root)
 
     titulo = ttk.Label(root, text="Menu Principal", font=("Arial", 18, "bold"))
     titulo.pack(pady=20)
