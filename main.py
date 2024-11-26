@@ -8,11 +8,22 @@ from datetime import datetime, timedelta
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 
+# Adaptadores personalizados para datetime
+def adapt_datetime(dt):
+    return dt.isoformat()
+
+def convert_datetime(s):
+    return datetime.fromisoformat(s.decode())
+
+sqlite3.register_adapter(datetime, adapt_datetime)
+sqlite3.register_converter("datetime", convert_datetime)
+
+
 # Função para carregar dados da planilha para o banco de dados
 def carregar_planilha_para_banco(planilha_path):
     df = pd.read_excel(planilha_path, sheet_name="Página1")
 
-    conexao = sqlite3.connect("estoque_dental.db")
+    conexao = sqlite3.connect("estoque_dental.db", detect_types=sqlite3.PARSE_DECLTYPES)
     cursor = conexao.cursor()
 
     # Tabela de insumos
@@ -26,7 +37,7 @@ def carregar_planilha_para_banco(planilha_path):
             observacao TEXT
         )
     ''')
-    
+
     # Tabela de histórico de movimentações
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS historico (
@@ -34,7 +45,7 @@ def carregar_planilha_para_banco(planilha_path):
             insumo_codigo TEXT NOT NULL,
             tipo TEXT NOT NULL,
             quantidade INTEGER NOT NULL,
-            data TEXT NOT NULL,
+            data datetime NOT NULL,
             FOREIGN KEY (insumo_codigo) REFERENCES insumos (codigo)
         )
     ''')
@@ -55,9 +66,10 @@ def carregar_planilha_para_banco(planilha_path):
             ))
         except Exception as e:
             print(f"Erro ao inserir linha {linha}: {e}")
-    
+
     conexao.commit()
     conexao.close()
+
 
 
 # Função para exportar os dados do banco para a planilha Excel
