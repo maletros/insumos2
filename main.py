@@ -188,7 +188,100 @@ def tela_registrar_insumos(root):
     btn_cancelar.pack(pady=5)
 
 
-# Função para monitorar estoque
+# Função para editar um insumo
+def editar_insumo(rowid, carregar_dados, conexao):
+    cursor = conexao.cursor()
+    
+    cursor.execute("SELECT rowid, * FROM insumos WHERE rowid = ?", (rowid,))
+    insumo = cursor.fetchone()
+    
+    if insumo:
+        janela_editar = tk.Toplevel()
+        janela_editar.title("Editar Insumo")
+        janela_editar.geometry("400x400")
+        centralizar_janela(janela_editar)
+
+        campos = [
+            ("Código do Insumo", "codigo", insumo[1]),
+            ("Nome do Insumo", "nome", insumo[2]),
+            ("Quantidade", "quantidade", insumo[3]),
+            ("Validade (DD/MM/AAAA)", "validade", insumo[4]),
+            ("Localização", "localizacao", insumo[5]),
+            ("Observação", "observacao", insumo[6])
+        ]
+
+        entradas = {}
+        for texto, chave, valor in campos:
+            label = tk.Label(janela_editar, text=texto)
+            label.pack()
+            entrada = tk.Entry(janela_editar)
+            entrada.insert(0, str(valor))  # Convertendo o valor para string
+            entrada.pack()
+            entradas[chave] = entrada
+
+        def salvar_edicao():
+            dados = {chave: entradas[chave].get().strip() for chave in entradas}
+
+            if not dados["nome"] or not dados["quantidade"].isdigit():
+                messagebox.showerror("Erro", "Preencha todos os campos obrigatórios corretamente!")
+                return
+
+            # Validar a data de validade
+            if dados["validade"]:
+                try:
+                    datetime.strptime(dados["validade"], "%d/%m/%Y")
+                except ValueError:
+                    messagebox.showerror("Erro", "Formato de data inválido! Use DD/MM/AAAA.")
+                    return
+
+            try:
+                cursor.execute('''
+                    UPDATE insumos
+                    SET codigo = ?, nome = ?, quantidade = ?, validade = ?, localizacao = ?, observacao = ?
+                    WHERE rowid = ?
+                ''', (
+                    dados["codigo"] if dados["codigo"] else None,
+                    dados["nome"],
+                    int(dados["quantidade"]),
+                    dados["validade"] if dados["validade"] else "INDETERMINADO",
+                    dados["localizacao"],
+                    dados["observacao"],
+                    rowid
+                ))
+                conexao.commit()
+                messagebox.showinfo("Sucesso", "Insumo editado com sucesso!")
+                exportar_para_excel()  # Atualizar a planilha Excel
+                carregar_dados()  # Atualizar os dados na tabela de monitoramento
+            except sqlite3.Error as e:
+                messagebox.showerror("Erro de Banco de Dados", str(e))
+            finally:
+                janela_editar.destroy()
+                carregar_dados()  # Recarregar dados na tabela de monitoramento
+
+        btn_salvar = tk.Button(janela_editar, text="Salvar", command=salvar_edicao)
+        btn_salvar.pack(pady=10)
+        btn_cancelar = tk.Button(janela_editar, text="Cancelar", command=janela_editar.destroy)
+        btn_cancelar.pack(pady=5)
+    else:
+        messagebox.showerror("Erro", "Insumo não encontrado!")
+
+# Função para excluir um insumo
+def excluir_insumo(rowid, carregar_dados, conexao):
+    if messagebox.askokcancel("Confirmação", "Tem certeza de que deseja excluir este insumo?"):
+        cursor = conexao.cursor()
+
+        try:
+            cursor.execute("DELETE FROM insumos WHERE rowid = ?", (rowid,))
+            conexao.commit()
+            messagebox.showinfo("Sucesso", "Insumo excluído com sucesso!")
+            exportar_para_excel()  # Atualizar a planilha Excel
+            carregar_dados()  # Atualizar os dados na tabela de monitoramento
+        except sqlite3.Error as e:
+            messagebox.showerror("Erro de Banco de Dados", str(e))
+        finally:
+            carregar_dados()  # Recarregar dados na tabela de monitoramento
+
+# Função para monitorar estoque (atualizado)
 def tela_monitorar_estoque(root):
     root.withdraw()
     janela = tk.Toplevel()
@@ -203,20 +296,21 @@ def tela_monitorar_estoque(root):
     frame_tabela = tk.Frame(janela)
     frame_tabela.pack(fill=tk.BOTH, expand=True)
 
-    colunas = ("Código", "Nome", "Quantidade", "Validade", "Localização", "Observação")
+    colunas = ("Código", "Nome", "Quantidade", "Validade", "Localização", "Observação", "rowid")
     tabela = ttk.Treeview(frame_tabela, columns=colunas, show="headings")
-    for col in colunas:
+    for col in colunas[:-1]:  # Excluindo rowid da exibição
         tabela.heading(col, text=col)
         tabela.column(col, width=120)
     tabela.pack(fill=tk.BOTH, expand=True, pady=10)
 
+    conexao = sqlite3.connect("estoque_dental.db")
+
     def carregar_dados():
         tabela.delete(*tabela.get_children())
-        conexao = sqlite3.connect("estoque_dental.db")
         cursor = conexao.cursor()
-        cursor.execute("SELECT * FROM insumos")
+        cursor.execute("SELECT rowid, * FROM insumos")
         for linha in cursor.fetchall():
-            quantidade = linha[2]
+            quantidade = linha[3]
             if quantidade >= 20:
                 cor = "#d4edda"  # Verde Claro
                 tag = "verde"
@@ -226,11 +320,33 @@ def tela_monitorar_estoque(root):
             else:
                 cor = "#f8d7da"  # Vermelho Claro
                 tag = "vermelho"
-            tabela.insert("", tk.END, values=linha, tags=(tag,))
+            tabela.insert("", tk.END, values=linha[1:] + (linha[0],), tags=(tag,))  # rowid no final
             tabela.tag_configure(tag, background=cor)
-        conexao.close()
 
     carregar_dados()
+
+    def editar_selecionado():
+        item_selecionado = tabela.selection()
+        if item_selecionado:
+            rowid = tabela.item(item_selecionado)["values"][-1]
+            editar_insumo(rowid, carregar_dados, conexao)
+        else:
+            messagebox.showerror("Erro", "Selecione um insumo para editar!")
+
+    def excluir_selecionado():
+        item_selecionado = tabela.selection()
+        if item_selecionado:
+            rowid = tabela.item(item_selecionado)["values"][-1]
+            excluir_insumo(rowid, carregar_dados, conexao)
+        else:
+            messagebox.showerror("Erro", "Selecione um insumo para excluir!")
+
+    btn_editar = tk.Button(janela, text="Editar Insumo", command=editar_selecionado)
+    btn_editar.pack(pady=5)
+    btn_excluir = tk.Button(janela, text="Excluir Insumo", command=excluir_selecionado)
+    btn_excluir.pack(pady=5)
+    btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [conexao.close(), root.deiconify()])
+    btn_voltar.pack(pady=10)
 
     # Filtro de busca
     filtro_label = tk.Label(janela, text="Buscar Insumo:")
@@ -241,11 +357,10 @@ def tela_monitorar_estoque(root):
     def filtrar_dados():
         busca = filtro_entrada.get().lower()
         tabela.delete(*tabela.get_children())
-        conexao = sqlite3.connect("estoque_dental.db")
         cursor = conexao.cursor()
-        cursor.execute("SELECT * FROM insumos WHERE LOWER(nome) LIKE ?", ('%' + busca + '%',))
+        cursor.execute("SELECT rowid, * FROM insumos WHERE LOWER(nome) LIKE ?", ('%' + busca + '%',))
         for linha in cursor.fetchall():
-            quantidade = linha[2]
+            quantidade = linha[3]
             if quantidade >= 20:
                 cor = "#d4edda"  # Verde Claro
                 tag = "verde"
@@ -255,15 +370,15 @@ def tela_monitorar_estoque(root):
             else:
                 cor = "#f8d7da"  # Vermelho Claro
                 tag = "vermelho"
-            tabela.insert("", tk.END, values=linha, tags=(tag,))
+            tabela.insert("", tk.END, values=linha[1:] + (linha[0],), tags=(tag,))  # rowid no final
             tabela.tag_configure(tag, background=cor)
-        conexao.close()
 
     btn_filtrar = tk.Button(janela, text="Filtrar", command=filtrar_dados)
     btn_filtrar.pack(pady=5)
 
-    btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
     btn_voltar.pack(pady=10)
+
+    janela.protocol("WM_DELETE_WINDOW", lambda: [conexao.close(), root.deiconify()])
 
 
 # Função para movimentação de estoque
