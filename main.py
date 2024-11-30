@@ -288,9 +288,9 @@ def tela_monitorar_estoque(root):
     frame_tabela = ttk.Frame(janela)
     frame_tabela.pack(fill=tk.BOTH, expand=True)
 
-    colunas = ("Código", "Nome", "Quantidade", "Validade", "Localização", "Observação", "rowid")
+    colunas = ("Código", "Nome", "Quantidade", "Validade", "Localização", "Observação")
     tabela = ttk.Treeview(frame_tabela, columns=colunas, show="headings")
-    for col in colunas[:-1]:  # Excluindo rowid da exibição
+    for col in colunas:
         tabela.heading(col, text=col)
         tabela.column(col, width=120)
     tabela.pack(fill=tk.BOTH, expand=True, pady=10)
@@ -312,7 +312,7 @@ def tela_monitorar_estoque(root):
             else:
                 cor = "#f8d7da"  # Vermelho Claro
                 tag = "vermelho"
-            tabela.insert("", tk.END, values=linha[1:] + (linha[0],), tags=(tag,))  # rowid no final
+            tabela.insert("", tk.END, values=linha[1:], tags=(tag,))  # Removendo rowid da exibição
             tabela.tag_configure(tag, background=cor)
 
     carregar_dados()
@@ -362,10 +362,10 @@ def tela_monitorar_estoque(root):
             else:
                 cor = "#f8d7da"  # Vermelho Claro
                 tag = "vermelho"
-            tabela.insert("", tk.END, values=linha[1:] + (linha[0],), tags=(tag,))  # rowid no final
+            tabela.insert("", tk.END, values=linha[1:], tags=(tag,))  # Removendo rowid da exibição
             tabela.tag_configure(tag, background=cor)
 
-    btn_filtrar = ttk.Button(janela, text="Filtrar", command=filtrar_dados, bootstyle=INFO)
+    btn_filtrar = ttk.Button(janela, text="Buscar", command=filtrar_dados, bootstyle=INFO)
     btn_filtrar.pack(pady=5)
 
     janela.protocol("WM_DELETE_WINDOW", lambda: [conexao.close(), root.deiconify()])
