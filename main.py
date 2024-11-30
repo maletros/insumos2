@@ -3,7 +3,6 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 import pandas as pd
-import csv
 from datetime import datetime, timedelta
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
@@ -17,7 +16,6 @@ def convert_datetime(s):
 
 sqlite3.register_adapter(datetime, adapt_datetime)
 sqlite3.register_converter("datetime", convert_datetime)
-
 
 # Função para carregar dados da planilha para o banco de dados
 def carregar_planilha_para_banco(planilha_path):
@@ -70,26 +68,23 @@ def carregar_planilha_para_banco(planilha_path):
     conexao.commit()
     conexao.close()
 
-
-
 # Função para exportar os dados do banco para a planilha Excel
 def exportar_para_excel():
     conexao = sqlite3.connect("estoque_dental.db")
     cursor = conexao.cursor()
-    
+
     # Buscar dados da tabela de insumos
     cursor.execute("SELECT * FROM insumos")
     dados = cursor.fetchall()
-    
+
     # Criar um DataFrame com os dados
     df = pd.DataFrame(dados, columns=["CÓDIGO", "ÍTEM", "QUANTIDADE", "VALIDADE", "ESTANTE/PRATELEIRA", "OBSERVAÇÃO"])
-    
+
     # Exportar para a planilha
     nome_arquivo = "ESTOQUE_ATUALIZADO.xlsx"
     df.to_excel(nome_arquivo, index=False, sheet_name="Página1")
     messagebox.showinfo("Sucesso", f"Planilha exportada: {nome_arquivo}")
     conexao.close()
-
 
 # Função para converter as datas de validade corretamente (ignorando o tempo)
 def converter_data(data):
@@ -100,7 +95,6 @@ def converter_data(data):
             return datetime.strptime(data, "%Y-%m-%d").date()  # Apenas a data
         except ValueError:
             return None
-
 
 # Função para centralizar a janela
 def centralizar_janela(root):
@@ -113,8 +107,6 @@ def centralizar_janela(root):
     x = (largura_tela // 2) - (largura_janela // 2)
     y = (altura_tela // 2) - (altura_janela // 2)
     root.geometry(f'{largura_janela}x{altura_janela}+{x}+{y}')
-
-
 
 # Função para registrar novos insumos manualmente
 def tela_registrar_insumos(root):
@@ -186,7 +178,6 @@ def tela_registrar_insumos(root):
     btn_salvar.pack(pady=10)
     btn_cancelar = tk.Button(janela, text="Cancelar", command=lambda: [janela.destroy(), root.deiconify()])
     btn_cancelar.pack(pady=5)
-
 
 # Função para editar um insumo
 def editar_insumo(rowid, carregar_dados, conexao):
@@ -345,7 +336,7 @@ def tela_monitorar_estoque(root):
     btn_editar.pack(pady=5)
     btn_excluir = tk.Button(janela, text="Excluir Insumo", command=excluir_selecionado)
     btn_excluir.pack(pady=5)
-    btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [conexao.close(), root.deiconify()])
+    btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
     btn_voltar.pack(pady=10)
 
     # Filtro de busca
@@ -376,10 +367,7 @@ def tela_monitorar_estoque(root):
     btn_filtrar = tk.Button(janela, text="Filtrar", command=filtrar_dados)
     btn_filtrar.pack(pady=5)
 
-    btn_voltar.pack(pady=10)
-
     janela.protocol("WM_DELETE_WINDOW", lambda: [conexao.close(), root.deiconify()])
-
 
 # Função para movimentação de estoque
 def tela_movimentacao_estoque(root):
@@ -475,7 +463,6 @@ def tela_movimentacao_estoque(root):
     btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
     btn_voltar.pack(pady=10)
 
-
 # Função para histórico de movimentações
 def tela_historico(root):
     root.withdraw()
@@ -517,7 +504,6 @@ def tela_historico(root):
     btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
     btn_voltar.pack(pady=10)
 
-
 # Função para verificar validade
 def tela_alertas_validade(root):
     root.withdraw()
@@ -558,7 +544,6 @@ def tela_alertas_validade(root):
     btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
     btn_voltar.pack(pady=10)
 
-
 def gerar_relatorio_pdf():
     conexao = sqlite3.connect("estoque_dental.db")
     cursor = conexao.cursor()
@@ -594,7 +579,6 @@ def gerar_relatorio_pdf():
     c.save()
     messagebox.showinfo("Sucesso", f"Relatório gerado: {nome_arquivo}")
 
-
 def tela_gerar_relatorio(root):
     root.withdraw()
     janela = tk.Toplevel()
@@ -616,8 +600,6 @@ def tela_gerar_relatorio(root):
 
     btn_nao = ttk.Button(janela, text="Não", command=lambda: [janela.destroy(), root.deiconify()])
     btn_nao.pack(pady=5)
-
-
 
 # Aplicar estilo ao aplicativo
 def aplicar_estilos():
@@ -665,7 +647,6 @@ def iniciar_aplicativo(planilha_path):
     btn_sair.pack(pady=5)
 
     root.mainloop()
-
 
 # Caminho relativo da planilha
 planilha_path = "ESTOQUE.xlsx"
