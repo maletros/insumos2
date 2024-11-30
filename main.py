@@ -1,7 +1,8 @@
-import sqlite3
 import tkinter as tk
+import ttkbootstrap as ttk
+from ttkbootstrap.constants import *
+import sqlite3
 from tkinter import messagebox
-from tkinter import ttk
 import pandas as pd
 from datetime import datetime, timedelta
 from reportlab.pdfgen import canvas
@@ -111,7 +112,7 @@ def centralizar_janela(root):
 # Função para registrar novos insumos manualmente
 def tela_registrar_insumos(root):
     root.withdraw()
-    janela = tk.Toplevel()
+    janela = ttk.Toplevel()
     janela.title("Registrar Novo Insumo")
     janela.geometry("800x600")
 
@@ -128,9 +129,9 @@ def tela_registrar_insumos(root):
 
     entradas = {}
     for texto, chave in campos:
-        label = tk.Label(janela, text=texto)
+        label = ttk.Label(janela, text=texto)
         label.pack()
-        entrada = tk.Entry(janela)
+        entrada = ttk.Entry(janela)
         entrada.pack()
         entradas[chave] = entrada
 
@@ -174,9 +175,9 @@ def tela_registrar_insumos(root):
         janela.destroy()
         root.deiconify()
 
-    btn_salvar = tk.Button(janela, text="Salvar", command=salvar_insumo)
+    btn_salvar = ttk.Button(janela, text="Salvar", command=salvar_insumo, bootstyle=SUCCESS)
     btn_salvar.pack(pady=10)
-    btn_cancelar = tk.Button(janela, text="Cancelar", command=lambda: [janela.destroy(), root.deiconify()])
+    btn_cancelar = ttk.Button(janela, text="Cancelar", command=lambda: [janela.destroy(), root.deiconify()], bootstyle=DANGER)
     btn_cancelar.pack(pady=5)
 
 # Função para editar um insumo
@@ -187,7 +188,7 @@ def editar_insumo(rowid, carregar_dados, conexao):
     insumo = cursor.fetchone()
     
     if insumo:
-        janela_editar = tk.Toplevel()
+        janela_editar = ttk.Toplevel()
         janela_editar.title("Editar Insumo")
         janela_editar.geometry("400x400")
         centralizar_janela(janela_editar)
@@ -203,9 +204,9 @@ def editar_insumo(rowid, carregar_dados, conexao):
 
         entradas = {}
         for texto, chave, valor in campos:
-            label = tk.Label(janela_editar, text=texto)
+            label = ttk.Label(janela_editar, text=texto)
             label.pack()
-            entrada = tk.Entry(janela_editar)
+            entrada = ttk.Entry(janela_editar)
             entrada.insert(0, str(valor))  # Convertendo o valor para string
             entrada.pack()
             entradas[chave] = entrada
@@ -249,9 +250,9 @@ def editar_insumo(rowid, carregar_dados, conexao):
                 janela_editar.destroy()
                 carregar_dados()  # Recarregar dados na tabela de monitoramento
 
-        btn_salvar = tk.Button(janela_editar, text="Salvar", command=salvar_edicao)
+        btn_salvar = ttk.Button(janela_editar, text="Salvar", command=salvar_edicao, bootstyle=SUCCESS)
         btn_salvar.pack(pady=10)
-        btn_cancelar = tk.Button(janela_editar, text="Cancelar", command=janela_editar.destroy)
+        btn_cancelar = ttk.Button(janela_editar, text="Cancelar", command=janela_editar.destroy, bootstyle=DANGER)
         btn_cancelar.pack(pady=5)
     else:
         messagebox.showerror("Erro", "Insumo não encontrado!")
@@ -275,16 +276,16 @@ def excluir_insumo(rowid, carregar_dados, conexao):
 # Função para monitorar estoque (atualizado)
 def tela_monitorar_estoque(root):
     root.withdraw()
-    janela = tk.Toplevel()
+    janela = ttk.Toplevel()
     janela.title("Monitorar Estoque")
     janela.geometry("800x600")
 
     centralizar_janela(janela)
 
-    titulo = tk.Label(janela, text="Estoque Atual", font=("Arial", 18, "bold"))
+    titulo = ttk.Label(janela, text="Estoque Atual", font=("Arial", 18, "bold"))
     titulo.pack(pady=10)
 
-    frame_tabela = tk.Frame(janela)
+    frame_tabela = ttk.Frame(janela)
     frame_tabela.pack(fill=tk.BOTH, expand=True)
 
     colunas = ("Código", "Nome", "Quantidade", "Validade", "Localização", "Observação", "rowid")
@@ -332,17 +333,17 @@ def tela_monitorar_estoque(root):
         else:
             messagebox.showerror("Erro", "Selecione um insumo para excluir!")
 
-    btn_editar = tk.Button(janela, text="Editar Insumo", command=editar_selecionado)
+    btn_editar = ttk.Button(janela, text="Editar Insumo", command=editar_selecionado, bootstyle=SUCCESS)
     btn_editar.pack(pady=5)
-    btn_excluir = tk.Button(janela, text="Excluir Insumo", command=excluir_selecionado)
+    btn_excluir = ttk.Button(janela, text="Excluir Insumo", command=excluir_selecionado, bootstyle=DANGER)
     btn_excluir.pack(pady=5)
-    btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
+    btn_voltar = ttk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()], bootstyle=SECONDARY)
     btn_voltar.pack(pady=10)
 
     # Filtro de busca
-    filtro_label = tk.Label(janela, text="Buscar Insumo:")
+    filtro_label = ttk.Label(janela, text="Buscar Insumo:")
     filtro_label.pack()
-    filtro_entrada = tk.Entry(janela)
+    filtro_entrada = ttk.Entry(janela)
     filtro_entrada.pack()
 
     def filtrar_dados():
@@ -364,7 +365,7 @@ def tela_monitorar_estoque(root):
             tabela.insert("", tk.END, values=linha[1:] + (linha[0],), tags=(tag,))  # rowid no final
             tabela.tag_configure(tag, background=cor)
 
-    btn_filtrar = tk.Button(janela, text="Filtrar", command=filtrar_dados)
+    btn_filtrar = ttk.Button(janela, text="Filtrar", command=filtrar_dados, bootstyle=INFO)
     btn_filtrar.pack(pady=5)
 
     janela.protocol("WM_DELETE_WINDOW", lambda: [conexao.close(), root.deiconify()])
@@ -372,18 +373,18 @@ def tela_monitorar_estoque(root):
 # Função para movimentação de estoque
 def tela_movimentacao_estoque(root):
     root.withdraw()
-    janela = tk.Toplevel()
+    janela = ttk.Toplevel()
     janela.title("Movimentação de Estoque")
     janela.geometry("800x600")
 
     centralizar_janela(janela)
 
-    titulo = tk.Label(janela, text="Registrar Movimentação de Estoque", font=("Arial", 18, "bold"))
+    titulo = ttk.Label(janela, text="Registrar Movimentação de Estoque", font=("Arial", 18, "bold"))
     titulo.pack(pady=10)
 
-    frame_selecao = tk.Frame(janela)
+    frame_selecao = ttk.Frame(janela)
     frame_selecao.pack(pady=10)
-    label_insumo = tk.Label(frame_selecao, text="Selecionar Insumo:")
+    label_insumo = ttk.Label(frame_selecao, text="Selecionar Insumo:")
     label_insumo.pack(side=tk.LEFT, padx=5)
     combo_insumos = ttk.Combobox(frame_selecao, state="readonly", width=30)
     combo_insumos.pack(side=tk.LEFT, padx=5)
@@ -398,11 +399,11 @@ def tela_movimentacao_estoque(root):
 
     carregar_insumos()
 
-    frame_quantidade = tk.Frame(janela)
+    frame_quantidade = ttk.Frame(janela)
     frame_quantidade.pack(pady=10)
-    label_quantidade = tk.Label(frame_quantidade, text="Quantidade:")
+    label_quantidade = ttk.Label(frame_quantidade, text="Quantidade:")
     label_quantidade.pack(side=tk.LEFT, padx=5)
-    entrada_quantidade = tk.Entry(frame_quantidade, width=10)
+    entrada_quantidade = ttk.Entry(frame_quantidade, width=10)
     entrada_quantidade.pack(side=tk.LEFT, padx=5)
 
     # Registrar entrada
@@ -455,27 +456,27 @@ def tela_movimentacao_estoque(root):
         messagebox.showinfo("Sucesso", "Saída registrada com sucesso!")
         carregar_insumos()
 
-    btn_entrada = tk.Button(janela, text="Registrar Entrada", command=registrar_entrada)
+    btn_entrada = ttk.Button(janela, text="Registrar Entrada", command=registrar_entrada, bootstyle=SUCCESS)
     btn_entrada.pack(pady=5)
-    btn_saida = tk.Button(janela, text="Registrar Saída", command=registrar_saida)
+    btn_saida = ttk.Button(janela, text="Registrar Saída", command=registrar_saida, bootstyle=DANGER)
     btn_saida.pack(pady=5)
 
-    btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
+    btn_voltar = ttk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()], bootstyle=SECONDARY)
     btn_voltar.pack(pady=10)
 
 # Função para histórico de movimentações
 def tela_historico(root):
     root.withdraw()
-    janela = tk.Toplevel()
+    janela = ttk.Toplevel()
     janela.title("Histórico de Movimentações")
     janela.geometry("800x600")
 
     centralizar_janela(janela)
 
-    titulo = tk.Label(janela, text="Histórico de Movimentações", font=("Arial", 18, "bold"))
+    titulo = ttk.Label(janela, text="Histórico de Movimentações", font=("Arial", 18, "bold"))
     titulo.pack(pady=10)
 
-    frame_tabela = tk.Frame(janela)
+    frame_tabela = ttk.Frame(janela)
     frame_tabela.pack(fill=tk.BOTH, expand=True)
 
     colunas = ("ID", "Código do Insumo", "Nome do Insumo", "Tipo", "Quantidade", "Data")
@@ -501,22 +502,22 @@ def tela_historico(root):
 
     carregar_historico()
 
-    btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
+    btn_voltar = ttk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()], bootstyle=SECONDARY)
     btn_voltar.pack(pady=10)
 
 # Função para verificar validade
 def tela_alertas_validade(root):
     root.withdraw()
-    janela = tk.Toplevel()
+    janela = ttk.Toplevel()
     janela.title("Alertas de Validade")
     janela.geometry("800x600")
 
     centralizar_janela(janela)
 
-    titulo = tk.Label(janela, text="Itens Vencidos ou Próximos da Validade", font=("Arial", 18, "bold"))
+    titulo = ttk.Label(janela, text="Itens Vencidos ou Próximos da Validade", font=("Arial", 18, "bold"))
     titulo.pack(pady=10)
 
-    frame_tabela = tk.Frame(janela)
+    frame_tabela = ttk.Frame(janela)
     frame_tabela.pack(fill=tk.BOTH, expand=True)
 
     colunas = ("Código", "Nome", "Quantidade", "Validade", "Localização")
@@ -541,7 +542,7 @@ def tela_alertas_validade(root):
 
     carregar_alertas()
 
-    btn_voltar = tk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()])
+    btn_voltar = ttk.Button(janela, text="Voltar", command=lambda: [janela.destroy(), root.deiconify()], bootstyle=SECONDARY)
     btn_voltar.pack(pady=10)
 
 def gerar_relatorio_pdf():
@@ -581,7 +582,7 @@ def gerar_relatorio_pdf():
 
 def tela_gerar_relatorio(root):
     root.withdraw()
-    janela = tk.Toplevel()
+    janela = ttk.Toplevel()
     janela.title("Gerar Relatório")
     janela.geometry("800x600")
 
@@ -595,32 +596,22 @@ def tela_gerar_relatorio(root):
         janela.destroy()
         root.deiconify()
 
-    btn_sim = ttk.Button(janela, text="Sim", command=confirmar_gerar_relatorio)
+    btn_sim = ttk.Button(janela, text="Sim", command=confirmar_gerar_relatorio, bootstyle=SUCCESS)
     btn_sim.pack(pady=5)
 
-    btn_nao = ttk.Button(janela, text="Não", command=lambda: [janela.destroy(), root.deiconify()])
+    btn_nao = ttk.Button(janela, text="Não", command=lambda: [janela.destroy(), root.deiconify()], bootstyle=DANGER)
     btn_nao.pack(pady=5)
 
 # Aplicar estilo ao aplicativo
 def aplicar_estilos():
     estilo = ttk.Style()
-    estilo.theme_use('clam')
-
-    # Configuração de fontes
-    estilo.configure('TLabel', font=('Arial', 12))
-    estilo.configure('TButton', font=('Arial', 12), padding=6)
-    estilo.configure('Treeview', font=('Arial', 10), rowheight=25)
-    estilo.configure('TEntry', font=('Arial', 12))
-
-    # Estilo dos botões
-    estilo.configure('TButton', background='#4CAF50', foreground='white', borderwidth=1)
-    estilo.map('TButton', background=[('active', '#45a049')])
+    estilo.theme_use('litera')  # Escolha o tema desejado
 
 # Menu principal
 def iniciar_aplicativo(planilha_path):
     carregar_planilha_para_banco(planilha_path)
 
-    root = tk.Tk()
+    root = ttk.Window(themename="litera")  # Escolha o tema desejado
     aplicar_estilos()  # Aplicar os estilos
     root.title("Controle de Estoque - Clínica Odontológica")
     root.geometry("800x600")
@@ -640,10 +631,10 @@ def iniciar_aplicativo(planilha_path):
     ]
 
     for texto, comando in botoes:
-        btn = ttk.Button(root, text=texto, width=30, command=comando)
+        btn = ttk.Button(root, text=texto, width=30, command=comando, bootstyle=SUCCESS)
         btn.pack(pady=5)
 
-    btn_sair = ttk.Button(root, text="Sair", width=30, command=root.quit)
+    btn_sair = ttk.Button(root, text="Sair", width=30, command=root.quit, bootstyle=DANGER)
     btn_sair.pack(pady=5)
 
     root.mainloop()
